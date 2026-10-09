@@ -63,10 +63,11 @@ const SPEEDS = [0, 85, 55, 32];   // velocidad base por tamaño
 const POINTS = [0, 100, 50, 20];  // puntos por tamaño
 
 class Asteroid {
-  constructor(x, y, size = 3) {
+  constructor(x, y, size = 3, saucer = false) {
     this.x    = x;
     this.y    = y;
     this.size = size;
+    this.saucer = saucer && size === 3;   // variante platillo volador (solo grande)
     this.radius = RADII[size];
     this.dead = false;
 
@@ -74,8 +75,9 @@ class Asteroid {
     const speed = SPEEDS[size] + rand(-15, 15);
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
-    this.rotSpeed = rand(-1.2, 1.2);
-    this.rot = rand(0, Math.PI * 2);
+    // El platillo no rota: siempre se dibuja con la cúpula hacia arriba
+    this.rotSpeed = this.saucer ? 0 : rand(-1.2, 1.2);
+    this.rot = this.saucer ? 0 : rand(0, Math.PI * 2);
 
     // Polígono irregular
     const n = randInt(8, 13);
@@ -101,6 +103,29 @@ class Asteroid {
     ];
   }
 
+  drawSaucer() {
+    const r = this.radius;
+    ctx.beginPath();
+    // Casco inferior
+    ctx.moveTo(-r, 0);
+    ctx.lineTo(-r * 0.45, r * 0.3);
+    ctx.lineTo( r * 0.45, r * 0.3);
+    ctx.lineTo( r, 0);
+    // Borde superior del disco
+    ctx.lineTo( r * 0.45, -r * 0.2);
+    ctx.lineTo(-r * 0.45, -r * 0.2);
+    ctx.closePath();
+    // Línea central del disco
+    ctx.moveTo(-r, 0);
+    ctx.lineTo( r, 0);
+    ctx.stroke();
+    // Cúpula
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.45, -r * 0.2);
+    ctx.bezierCurveTo(-r * 0.35, -r * 0.65, r * 0.35, -r * 0.65, r * 0.45, -r * 0.2);
+    ctx.stroke();
+  }
+
   draw() {
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -108,6 +133,11 @@ class Asteroid {
     ctx.strokeStyle = '#fff';
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
+    if (this.saucer) {
+      this.drawSaucer();
+      ctx.restore();
+      return;
+    }
     ctx.beginPath();
     ctx.moveTo(this.verts[0][0], this.verts[0][1]);
     for (let i = 1; i < this.verts.length; i++)
@@ -249,7 +279,8 @@ function spawnAsteroids(count) {
       x = rand(0, W);
       y = rand(0, H);
     } while (Math.hypot(x - W / 2, y - H / 2) < SAFE_DIST);
-    asteroids.push(new Asteroid(x, y, 3));
+    // El primer asteroide grande de cada oleada es el platillo volador
+    asteroids.push(new Asteroid(x, y, 3, i === 0));
   }
 }
 
